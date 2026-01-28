@@ -394,6 +394,24 @@ window.game = {
         startMusic(lvl);
     },
 
+    nextLevel: () => {
+        if (GAME.level < 3) {
+            GAME.state = 'TRANSITION';
+            GAME.screens.transition.classList.remove('hidden');
+
+            const texts = ["ОТДЕЛ РАЗРАБОТКИ", "СЕРВЕРНАЯ"];
+            const text = texts[GAME.level - 1] || "NEXT LEVEL";
+            GAME.screens.transition.querySelector('h1').innerText = text;
+
+            setTimeout(() => {
+                GAME.screens.transition.classList.add('hidden');
+                game.startLevel(GAME.level + 1);
+            }, 3000);
+        } else {
+            showVictory();
+        }
+    },
+
     restartLevel: () => {
         GAME.screens.gameover.classList.add('hidden');
         game.startLevel(GAME.level);
@@ -804,6 +822,7 @@ let bgmGain = null;
 let nextNoteTime = 0;
 let noteIndex = 0;
 let isMuted = false;
+let bgmInterval = null; // Fix crash
 function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
