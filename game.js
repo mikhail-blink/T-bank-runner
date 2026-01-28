@@ -157,7 +157,7 @@ class Player {
         this.charId = charId;
         this.w = 80;
         this.h = 80;
-        this.x = 100;
+        this.x = 30; // Moved left to create more reaction time/space
         this.y = GAME.height - CONFIG.groundY - this.h;
         this.vy = 0;
         this.grounded = true;
@@ -305,62 +305,61 @@ class Projectile {
 }
 
 class Boss {
-    constructor(level) {
         this.level = level;
-        this.data = SPRITES.bosses[level - 1];
-        this.name = this.data.name;
-        this.w = 150;
-        this.h = 150;
-        this.x = GAME.width - 200;
-        this.y = GAME.height - CONFIG.groundY - this.h;
-        this.hp = 3 + (level * 2); // Reduced HP (was 5)
-        this.maxHp = this.hp;
-        this.state = 'idle'; // idle, attack
-        this.attackTimer = 0;
-        this.moveTimer = 0;
-        this.targetY = this.y;
+this.data = SPRITES.bosses[level - 1];
+this.name = this.data.name;
+this.w = 150;
+this.h = 150;
+this.x = GAME.width - 120; // Pushed further right for mobile space
+this.y = GAME.height - CONFIG.groundY - this.h;
+this.hp = 3 + (level * 2); // Reduced HP (was 5)
+this.maxHp = this.hp;
+this.state = 'idle'; // idle, attack
+this.attackTimer = 0;
+this.moveTimer = 0;
+this.targetY = this.y;
     }
 
-    update() {
-        // Boss Movement (float up down slightly)
-        this.moveTimer += 0.05;
-        this.y = (GAME.height - CONFIG.groundY - this.h) + Math.sin(this.moveTimer) * 50;
+update() {
+    // Boss Movement (float up down slightly)
+    this.moveTimer += 0.05;
+    this.y = (GAME.height - CONFIG.groundY - this.h) + Math.sin(this.moveTimer) * 50;
 
-        // Attack Logic
-        if (this.attackTimer <= 0) {
-            this.attack();
-            this.attackTimer = 150 - (this.level * 10); // Slower attack (was 100)
-        }
-        this.attackTimer--;
+    // Attack Logic
+    if (this.attackTimer <= 0) {
+        this.attack();
+        this.attackTimer = 150 - (this.level * 10); // Slower attack (was 100)
     }
+    this.attackTimer--;
+}
 
-    attack() {
-        this.state = 'attack';
-        setTimeout(() => this.state = 'idle', 500);
-        // Spawn projectile aimed at player ('ticket' variant)
-        const projY = this.y + this.h / 2;
-        // Aim logic: vary speed slightly
-        const speed = -5 - (this.level * 1.5);
-        GAME.entities.push(new Projectile(this.x, projY, speed, 0, 'boss', 'ticket'));
-        playSound('shoot');
-    }
+attack() {
+    this.state = 'attack';
+    setTimeout(() => this.state = 'idle', 500);
+    // Spawn projectile aimed at player ('ticket' variant)
+    const projY = this.y + this.h / 2;
+    // Aim logic: vary speed slightly
+    const speed = -5 - (this.level * 1.5);
+    GAME.entities.push(new Projectile(this.x, projY, speed, 0, 'boss', 'ticket'));
+    playSound('shoot');
+}
 
-    draw(ctx) {
-        const img = ASSETS.bosses;
-        const s = (this.state === 'attack') ? this.data.attack : this.data.idle;
+draw(ctx) {
+    const img = ASSETS.bosses;
+    const s = (this.state === 'attack') ? this.data.attack : this.data.idle;
 
-        // Draw HP bar
-        ctx.fillStyle = 'red';
-        ctx.fillRect(this.x, this.y - 20, this.w, 10);
-        ctx.fillStyle = 'green';
-        ctx.fillRect(this.x, this.y - 20, this.w * (this.hp / this.maxHp), 10);
+    // Draw HP bar
+    ctx.fillStyle = 'red';
+    ctx.fillRect(this.x, this.y - 20, this.w, 10);
+    ctx.fillStyle = 'green';
+    ctx.fillRect(this.x, this.y - 20, this.w * (this.hp / this.maxHp), 10);
 
-        const sx = s.x * img.naturalWidth;
-        const sy = s.y * img.naturalHeight;
-        const sw = s.w * img.naturalWidth;
-        const sh = s.h * img.naturalHeight;
-        ctx.drawImage(img, sx, sy, sw, sh, this.x, this.y, this.w, this.h);
-    }
+    const sx = s.x * img.naturalWidth;
+    const sy = s.y * img.naturalHeight;
+    const sw = s.w * img.naturalWidth;
+    const sh = s.h * img.naturalHeight;
+    ctx.drawImage(img, sx, sy, sw, sh, this.x, this.y, this.w, this.h);
+}
 }
 
 // --- Main Game Object ---
@@ -811,7 +810,7 @@ function initAudio() {
 }
 
 function startMusic(level) {
-    if (GAME.mute || !audioCtx) return;
+    if (isMuted || !audioCtx) return;
     stopMusic();
 
     let sequence = [];
@@ -835,7 +834,7 @@ function stopMusic() {
 }
 
 function playTone(freq, dur) {
-    if (GAME.mute || !audioCtx) return;
+    if (isMuted || !audioCtx) return;
     const osc = audioCtx.createOscillator();
     const g = audioCtx.createGain();
     osc.type = 'square'; // 8-bit style
@@ -852,7 +851,7 @@ function playTone(freq, dur) {
 
 function playSound(type) {
     initAudio(); // Ensure context exists
-    if (GAME.mute) return;
+    if (isMuted) return;
 
     // SFX override music context? better shared.
     const osc = audioCtx.createOscillator();
