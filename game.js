@@ -572,51 +572,10 @@ function bossDefeated() {
     playSound('boss_death');
     stopMusic();
 
-    // Show Transition Screen
-    const transScreen = document.getElementById('screen-transition');
-    const transTitle = document.getElementById('trans-title');
-    const transNext = document.getElementById('trans-next');
-
-    transScreen.classList.remove('hidden');
-    transScreen.style.opacity = '0';
-
-    // Fade In
-    requestAnimationFrame(() => {
-        transScreen.style.transition = 'opacity 0.5s ease-in';
-        transScreen.style.opacity = '1';
-    });
-
+    // Wait a moment for effect, then trigger next level logic
     setTimeout(() => {
-        if (GAME.level < 3) {
-            // Update Text for next level WHILE covered
-            const prevLine = GAME.level;
-            const nextLine = GAME.level + 1;
-
-            // Custom text: "Tasks of line X done, now rotated to line Y"
-            transTitle.innerText = "ОТЛИЧНАЯ РАБОТА!";
-            transTitle.style.fontSize = "2rem"; // Make it fit better
-
-            transNext.innerHTML = `Таски ${prevLine} линии разгребли,<br>теперь ты ротирован на ${nextLine} линию`;
-            transNext.style.textAlign = 'center';
-            transNext.style.fontSize = "1.2rem";
-
-            // Wait a bit on the yellow screen
-            setTimeout(() => {
-                // Background work: Level UP
-                game.startLevel(GAME.level + 1);
-
-                // Fade Out Screen to reveal new level
-                transScreen.style.opacity = '0';
-                setTimeout(() => {
-                    transScreen.classList.add('hidden');
-                }, 500);
-            }, 3000); // Give time to read
-        } else {
-            // Victory
-            transScreen.classList.add('hidden');
-            showVictory();
-        }
-    }, 500);
+        game.nextLevel();
+    }, 2000);
 }
 
 function showVictory() {
