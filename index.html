@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Bank Runner</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- UI Overlay -->
+        <div id="ui-layer">
+
+            <!-- Turn off orientation warning -->
+            <div id="orientation-warning" class="hidden">
+                <p>Пожалуйста, переверните устройство 🔄</p>
+            </div>
+
+            <!-- Character Selection Screen -->
+            <div id="screen-character-select" class="screen">
+                <h1 class="title">ВЫБОР ПЕРСОНАЖА</h1>
+                <div class="char-cards">
+                    <div class="char-card" data-char="dania" onclick="game.selectCharacter('dania')">
+                        <div class="char-portrait dania-portrait"></div>
+                        <h2>ДАНЯ</h2>
+                        <p>Оружие: ZzzZ</p>
+                    </div>
+                    <div class="char-card" data-char="tatiana" onclick="game.selectCharacter('tatiana')">
+                        <div class="char-portrait tatiana-portrait"></div>
+                        <h2>ТАТЬЯНА</h2>
+                        <p>Оружие: Токсик</p>
+                    </div>
+                </div>
+                <div class="controls-hint" style="margin-top: 20px; font-size: 1.2rem; opacity: 0.9;">Коснитесь для
+                    старта</div>
+                <div class="desktop-controls-hint" style="font-size: 12px; margin-top: 5px; opacity: 0.7;">
+                    ПК: [SPACE] Прыжок | [Z] или [SHIFT] Выстрел
+                </div>
+            </div>
+
+            <!-- HUD -->
+            <div id="hud" class="hidden">
+                <div class="hp-bar" id="hp-display">❤️❤️❤️</div>
+                <div class="level-info" id="level-display">Уровень 1: Паша</div>
+                <button id="mute-btn">🔊</button>
+            </div>
+
+            <!-- Mobile Controls -->
+            <div id="mobile-controls" class="hidden">
+                <button id="btn-shoot" class="control-btn shoot-btn">🔥</button>
+                <div id="touch-zone-jump" class="touch-zone"></div>
+                <button id="btn-jump" class="control-btn jump-btn">JUMP</button>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div id="screen-game-over" class="screen hidden">
+                <h1>ОЙ! ВСЁ!</h1>
+                <p>Вас завалили задачами.</p>
+                <button class="main-btn" onclick="game.restartLevel()">ЗАНОВО</button>
+            </div>
+
+            <!-- Victory Screen -->
+            <div id="screen-victory" class="screen hidden">
+                <h1 class="victory-text" style="font-family: sans-serif; font-weight: 900; text-transform: uppercase;">
+                    Поздравляю — теперь ты лид всех линий. Уволим всех?</h1>
+                <div class="victory-buttons">
+                    <button class="main-btn btn-yes" onclick="game.finalDecision(true)">ДА</button>
+                    <button class="main-btn btn-no" onclick="game.finalDecision(false)">НЕТ</button>
+                </div>
+                <button class="secondary-btn" onclick="game.restartGame()">РЕСТАРТ</button>
+            </div>
+
+            <!-- Level Transition Screen -->
+            <div id="screen-transition" class="screen hidden"
+                style="background: #FCD54C; color: #333; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;">
+                <h1 id="trans-title"
+                    style="font-size: 3rem; font-weight: 800; text-transform: uppercase; margin-bottom: 20px;">УРОВЕНЬ
+                    ПРОЙДЕН</h1>
+                <p id="trans-next" style="font-size: 1.5rem; font-weight: 600;">СЛЕДУЮЩИЙ УРОВЕНЬ...</p>
+            </div>
+
+            <!-- Resignation Letter -->
+            <div id="screen-resignation" class="screen hidden"
+                style="background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 200;">
+                <div class="paper"
+                    style="background: white; color: black; padding: 40px; width: 80%; max-width: 500px; font-family: 'Times New Roman', serif; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+                    <h2 style="text-align: center; text-decoration: underline; margin-bottom: 30px;">ЗАЯВЛЕНИЕ</h2>
+                    <p style="font-size: 1.2rem; line-height: 1.5; margin-bottom: 20px;">
+                        Я, <span id="resign-name" style="font-weight: bold; text-decoration: underline;">Имя
+                            Персонажа</span>, прошу уволить всех сотрудников компании по собственному желанию, так как я
+                        теперь Главный Лид и мне никто не нужен.
+                    </p>
+                    <p style="text-align: right; margin-top: 40px;">Дата: 26.01.2025</p>
+                    <p style="text-align: right;">Подпись: <i>Лид</i></p>
+                    <button class="main-btn" style="margin-top: 30px; width: 100%;"
+                        onclick="Telegram.WebApp.close()">ПОДПИСАТЬ И УЙТИ</button>
+                </div>
+            </div>
+
+            <!-- Screamer -->
+            <div id="screen-screamer" class="screen hidden"
+                style="background: black; z-index: 300; display: flex; justify-content: center; align-items: center;">
+                <img id="screamer-img" src="" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+
+        </div>
+
+        <!-- Hidden Asset Loader helper -->
+        <div id="assets" style="display:none;">
+            <img id="img-dania" src="dania_sprites_fixed_1769628642162.png">
+            <img id="img-tatiana" src="tatiana_sprites_fixed_1769628657831.png">
+            <img id="img-bosses" src="bosses_sprites_fixed_1769628677235.png">
+            <img id="img-obstacles" src="obstacles_tbank_rebrand_1769629375357.png">
+        </div>
+
+        <script src="game.js"></script>
+</body>
+
+</html>
