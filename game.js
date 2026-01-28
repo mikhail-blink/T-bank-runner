@@ -380,6 +380,8 @@ window.game = {
         GAME.entities = [];
         GAME.boss = null;
         GAME.state = 'PLAY';
+        GAME.gracePeriod = 180; // 3 seconds safe zone at start
+
 
         // Update UI
         GAME.screens.hud.classList.remove('hidden');
@@ -471,12 +473,16 @@ function updateHeartDisplay() {
 // --- Systems ---
 function spawnObstacles() {
     if (GAME.state !== 'PLAY') return;
+    if (GAME.gracePeriod > 0) return; // Safe zone active
     if (GAME.boss) return; // No obstacles during boss?
 
-    // Ensure minimum distance between obstacles
-    const lastEntity = GAME.entities[GAME.entities.length - 1];
+    // Ensure minimum distance between obstacles (ignore projectiles)
+    // We only care about spacing between OBSTACLES, not bullets
+    const obstacles = GAME.entities.filter(e => e instanceof Obstacle);
+    const lastObstacle = obstacles[obstacles.length - 1];
+
     let safeToSpawn = true;
-    if (lastEntity && lastEntity.x > GAME.width - 300) {
+    if (lastObstacle && lastObstacle.x > GAME.width - 400) { // Increased gap slightly for mobile readability
         safeToSpawn = false;
     }
 
@@ -617,13 +623,27 @@ function showVictory() {
 function loop() {
     requestAnimationFrame(loop);
 
-    // Resize
-    if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    // Resize (Virtual Resolution: Fixed Height 720p)
+    // This ensures consistent gameplay vertical space and crisp pixels
+    const VIRTUAL_HEIGHT = 720;
+    const aspect = window.innerWidth / window.innerHeight;
+    const virtualWidth = VIRTUAL_HEIGHT * aspect;
+
+    // Check if resize needed (compare truncated values)
+    if (canvas.width !== Math.floor(virtualWidth) || canvas.height !== VIRTUAL_HEIGHT) {
+        canvas.width = Math.floor(virtualWidth);
+        canvas.height = VIRTUAL_HEIGHT;
         GAME.width = canvas.width;
         GAME.height = canvas.height;
-        if (player) player.y = GAME.height - CONFIG.groundY - player.h; // Keep player on ground
+        ctx.imageSmoothingEnabled = false; // Important for pixel art
+
+        // Fix player position relative to new ground
+        if (player) {
+            player.y = GAME.height - CONFIG.groundY - player.h;
+
+            // If boss exists, fix Y too
+            if (GAME.boss) GAME.boss.y = GAME.height - CONFIG.groundY - GAME.boss.h;
+        }
     }
 
     ctx.clearRect(0, 0, GAME.width, GAME.height);
@@ -651,6 +671,8 @@ function loop() {
 
         // Level Progress
         GAME.levelTime++;
+        if (GAME.gracePeriod > 0) GAME.gracePeriod--;
+
         if (GAME.levelTime > 2000 && !GAME.boss && GAME.state !== 'BOSS') {
             GAME.state = 'BOSS';
 
@@ -776,12 +798,14 @@ function drawGround(ctx) {
     ctx.fillRect(0, y, w, 4);
 }
 
-// --- Audio ---
-let audioCtx = null;
+// --- Audio System ---
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
 let bgmOsc = null;
 let bgmGain = null;
-let bgmInterval = null;
-
+let nextNoteTime = 0;
+let noteIndex = 0;
+let isMuted = false;
 function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
@@ -926,5 +950,31 @@ window.onload = () => {
         INPUT.shoot = true;
     });
 
+    // Mute Button Logic
+    document.getElementById('mute-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        // Ensure AudioContext is running (browsers block it until interaction)
+        initAudio(); // Initialize if not already
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
+        isMuted = !isMuted;
+        const btn = document.getElementById('mute-btn');
+        btn.innerText = isMuted ? '🔇' : '🔊';
+
+        if (isMuted) {
+            if (bgmGain) bgmGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            audioCtx.suspend(); // Suspend the entire audio context
+        } else {
+            audioCtx.resume(); // Resume the entire audio context
+            if (bgmGain) {
+                bgmGain.gain.setValueAtTime(0.3, audioCtx.currentTime); // Restore BGM volume
+            }
+        }
+    });
+
+    // Start Loop
     loop();
 };
